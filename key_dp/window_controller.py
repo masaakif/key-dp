@@ -1,13 +1,18 @@
 import time
-import win32api
 import win32con
 import win32gui
-import win32process
-import pyautogui
+
+# 矢印キーからWindows仮想キーコードへのマッピング
+KEY_MAPPING = {
+    "left": win32con.VK_LEFT,
+    "right": win32con.VK_RIGHT,
+    "up": win32con.VK_UP,
+    "down": win32con.VK_DOWN,
+}
 
 
 class WindowController:
-    """Windows上のウィンドウ探索やアクティブ化、キー送信を行うクラス"""
+    """Windows上のウィンドウ探索やバックグラウンドでのキー送信を行うクラス"""
 
     @staticmethod
     def get_window_handle(title_part: str):
@@ -29,10 +34,7 @@ class WindowController:
         return hwnd_list[0] if hwnd_list else None
 
     def send_key_to_window(self, target_title: str, key_name: str):
-        """特定のウィンドウを一時的に最前面にしてキーを送り、元のウィンドウに戻す"""
-        # 現在アクティブなウィンドウを記憶
-        current_hwnd = win32gui.GetForegroundWindow()
-
+        """特定のウィンドウへ、アクティブ化を行わずに直接キーメッセージを送信する"""
         # 対象のウィンドウを探す
         target_hwnd = self.get_window_handle(target_title)
 
@@ -40,56 +42,25 @@ class WindowController:
             print(f"ターゲットウィンドウが見つかりません: {target_title}")
             return
 
-        # 対象ウィンドウがすでにアクティブならそのままキーを送る
-        if current_hwnd == target_hwnd:
-            pyautogui.press(key_name)
+        vk_code = KEY_MAPPING.get(key_name.lower())
+        if not vk_code:
+            print(f"無効なキー名です: {key_name}")
             return
 
-        # 対象ウィンドウを最前面化（非最小化）
-        if win32gui.IsIconic(target_hwnd):
-            win32gui.ShowWindow(target_hwnd, win32con.SW_RESTORE)
-
-        # 最前面化する際の制限（SetForegroundWindowの失敗）を回避するため、
-        # 現在アクティブなスレッドの入力を結合する
-        current_thread_id = win32api.GetCurrentThreadId()
-        foreground_thread_id = (
-            win32process.GetWindowThreadProcessId(current_hwnd)[0]
-            if current_hwnd
-            else 0
-        )
-
-        attached = False
-        if foreground_thread_id and foreground_thread_id != current_thread_id:
-            try:
-                win32api.AttachThreadInput(
-                    current_thread_id, foreground_thread_id, True
-                )
-                attached = True
-            except Exception:
-                pass
+        # 拡張キー（矢印キーなど）用のフラグを含めたlParam値の設定
+        # 24ビット目（1 << 24）は拡張キーフラグ
+        # 30ビット目（1 << 30）は直前の状態フラグ（Upのときは1）
+        # 31ビット目（1 << 31）は遷移状態フラグ（Upのときは1）
+        l_param_down = 1 | (1 << 24)
+        l_param_up = 1 | (1 << 24) | (1 << 30) | (1 << 31)
 
         try:
-            # ウィンドウをアクティブにする
-            win32gui.SetForegroundWindow(target_hwnd)
-            time.sleep(0.01)  # フォーカス切り替えのわずかな遊び
-
-            # キーを送信（常に単体のキーを入力する）
-            pyautogui.press(key_name)
-
-            time.sleep(0.01)
-
-            # 元のウィンドウにフォーカスを戻す
-            if current_hwnd and win32gui.IsWindow(current_hwnd):
-                win32gui.SetForegroundWindow(current_hwnd)
-
+            # 押下（WM_KEYDOWN）を送信
+            win32gui.PostMessage(
+                target_hwnd, win32con.WM_KEYDOWN, vk_code, l_param_down
+            )
+            time.sleep(0.01)  # メッセージの処理順序を保証するためのわずかなウェイト
+            # 離上（WM_KEYUP）を送信
+            win32gui.PostMessage(target_hwnd, win32con.WM_KEYUP, vk_code, l_param_up)
         except Exception as error:
-            print(f"エラーが発生しました: {error}")
-        finally:
-            # 入力の結合を解除する
-            if attached:
-                try:
-                    win32api.AttachThreadInput(
-                        current_thread_id, foreground_thread_id, False
-                    )
-                except Exception:
-                    pass
+            print(f"キー送信エラーが発生しました: {error}")
