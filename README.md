@@ -6,3 +6,11 @@
 
 - Windows OS
 - Python 3.10以上
+
+## 使い方
+
+以下のコマンドでスクリプトを起動できます。
+
+```powershell
+.venv\Scripts\python main.py
+```
