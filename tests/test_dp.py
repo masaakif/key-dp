@@ -1,14 +1,15 @@
 from unittest.mock import MagicMock, patch
 import pytest
-from dp import KeyRouter, WindowController
+from key_router import KeyRouter
+from window_controller import WindowController
 
 
 @pytest.fixture
 def mock_win32():
     with (
-        patch("dp.win32gui") as mock_gui,
-        patch("dp.win32con") as mock_con,
-        patch("dp.pyautogui") as mock_pyauto,
+        patch("window_controller.win32gui") as mock_gui,
+        patch("window_controller.win32con") as mock_con,
+        patch("window_controller.pyautogui") as mock_pyauto,
     ):
         yield mock_gui, mock_con, mock_pyauto
 
@@ -101,7 +102,7 @@ def test_send_key_with_ctrl(mock_win32):
 
 @pytest.fixture
 def mock_keyboard():
-    with patch("dp.keyboard") as mock_kb:
+    with patch("key_router.keyboard") as mock_kb:
         yield mock_kb
 
 
@@ -115,7 +116,7 @@ def test_key_router_routing_without_ctrl(mock_keyboard):
 
     # イベントを模倣
     dummy_event = MagicMock()
-    dummy_event.event_type = "down"  # keyboard.KEY_DOWN (通常 "down" とする文字列)
+    dummy_event.event_type = "down"  # keyboard.KEY_DOWN (通常 "down" となる文字列)
     dummy_event.name = "right"
 
     # keyboard.KEY_DOWN のモック定義
