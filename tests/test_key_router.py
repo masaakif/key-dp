@@ -28,9 +28,7 @@ def test_key_router_routing_without_ctrl(mock_keyboard):
     router.on_arrow_key(dummy_event)
 
     # NeeViewにキーが送信されたことを確認
-    mock_controller.send_key_to_window.assert_called_once_with(
-        "NeeView", "right", ctrl_pressed=False
-    )
+    mock_controller.send_key_to_window.assert_called_once_with("NeeView", "right")
 
 
 def test_key_router_routing_with_ctrl(mock_keyboard):
@@ -50,10 +48,8 @@ def test_key_router_routing_with_ctrl(mock_keyboard):
 
     router.on_arrow_key(dummy_event)
 
-    # ChromeにCtrlキー付きで送信されたことを確認
-    mock_controller.send_key_to_window.assert_called_once_with(
-        "Chrome", "left", ctrl_pressed=True
-    )
+    # Chromeに送信されたことを確認 (ctrl_pressedなし)
+    mock_controller.send_key_to_window.assert_called_once_with("Chrome", "left")
 
 
 def test_key_router_ignore_key_up(mock_keyboard):

@@ -28,9 +28,7 @@ class WindowController:
         win32gui.EnumWindows(enum_windows_callback, None)
         return hwnd_list[0] if hwnd_list else None
 
-    def send_key_to_window(
-        self, target_title: str, key_name: str, ctrl_pressed: bool = False
-    ):
+    def send_key_to_window(self, target_title: str, key_name: str):
         """特定のウィンドウを一時的に最前面にしてキーを送り、元のウィンドウに戻す"""
         # 現在アクティブなウィンドウを記憶
         current_hwnd = win32gui.GetForegroundWindow()
@@ -44,10 +42,7 @@ class WindowController:
 
         # 対象ウィンドウがすでにアクティブならそのままキーを送る
         if current_hwnd == target_hwnd:
-            if ctrl_pressed:
-                pyautogui.hotkey("ctrl", key_name)
-            else:
-                pyautogui.press(key_name)
+            pyautogui.press(key_name)
             return
 
         # 対象ウィンドウを最前面化（非最小化）
@@ -78,11 +73,8 @@ class WindowController:
             win32gui.SetForegroundWindow(target_hwnd)
             time.sleep(0.01)  # フォーカス切り替えのわずかな遊び
 
-            # キーを送信
-            if ctrl_pressed:
-                pyautogui.hotkey("ctrl", key_name)
-            else:
-                pyautogui.press(key_name)
+            # キーを送信（常に単体のキーを入力する）
+            pyautogui.press(key_name)
 
             time.sleep(0.01)
 

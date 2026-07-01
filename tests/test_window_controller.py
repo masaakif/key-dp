@@ -77,7 +77,7 @@ def test_send_key_to_active_window(mock_win32):
     mock_gui.GetForegroundWindow.return_value = 100
 
     with patch.object(WindowController, "get_window_handle", return_value=100):
-        controller.send_key_to_window("NeeView", "right", ctrl_pressed=False)
+        controller.send_key_to_window("NeeView", "right")
         mock_pyauto.press.assert_called_once_with("right")
         mock_pyauto.hotkey.assert_not_called()
 
@@ -97,7 +97,7 @@ def test_send_key_to_inactive_window(mock_win32):
     with patch.object(
         WindowController, "get_window_handle", return_value=100
     ) as mock_get_handle:
-        controller.send_key_to_window("NeeView", "left", ctrl_pressed=False)
+        controller.send_key_to_window("NeeView", "left")
         mock_get_handle.assert_called_once_with("NeeView")
 
         # 最前面化する処理が呼ばれたことをアサート
@@ -108,15 +108,3 @@ def test_send_key_to_inactive_window(mock_win32):
         # アタッチおよび解除が正常に呼び出されたか検証
         mock_api.AttachThreadInput.assert_any_call(1111, 2222, True)
         mock_api.AttachThreadInput.assert_any_call(1111, 2222, False)
-
-
-def test_send_key_with_ctrl(mock_win32):
-    mock_gui, _, mock_pyauto, _, _ = mock_win32
-    controller = WindowController()
-
-    mock_gui.GetForegroundWindow.return_value = 100
-
-    with patch.object(WindowController, "get_window_handle", return_value=100):
-        controller.send_key_to_window("Google Chrome", "up", ctrl_pressed=True)
-        mock_pyauto.hotkey.assert_called_once_with("ctrl", "up")
-        mock_pyauto.press.assert_not_called()

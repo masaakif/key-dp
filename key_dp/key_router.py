@@ -22,15 +22,11 @@ class KeyRouter:
 
         # Ctrlキーが同時に押されているか確認
         if keyboard.is_pressed("ctrl"):
-            print(f"Ctrl + {key_name} -> Chromeへ送信")
-            self.window_controller.send_key_to_window(
-                self.chrome_title, key_name, ctrl_pressed=True
-            )
+            print(f"Ctrl + {key_name} -> Chromeへ（矢印のみ）送信")
+            self.window_controller.send_key_to_window(self.chrome_title, key_name)
         else:
             print(f"{key_name} -> NeeViewへ送信")
-            self.window_controller.send_key_to_window(
-                self.neeview_title, key_name, ctrl_pressed=False
-            )
+            self.window_controller.send_key_to_window(self.neeview_title, key_name)
 
     def start(self):
         """キーのルーティング処理を開始し、Escキーが長押しされるまで待機する"""
