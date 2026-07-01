@@ -1,6 +1,8 @@
 import time
+import win32api
 import win32con
 import win32gui
+import win32process
 import pyautogui
 
 
@@ -9,13 +11,17 @@ class WindowController:
 
     @staticmethod
     def get_window_handle(title_part: str):
-        """指定した文字列をタイトルに含むウィンドウのハンドルを取得する"""
+        """指定した文字列をタイトルまたはクラス名に含むウィンドウのハンドルを取得する"""
         hwnd_list = []
 
         def enum_windows_callback(hwnd, extra):
             if win32gui.IsWindowVisible(hwnd):
                 title = win32gui.GetWindowText(hwnd)
-                if title_part.lower() in title.lower():
+                class_name = win32gui.GetClassName(hwnd)
+                # タイトルまたはクラス名のいずれかに指定文字列が含まれているか判定
+                if (title_part.lower() in title.lower()) or (
+                    title_part.lower() in class_name.lower()
+                ):
                     hwnd_list.append(hwnd)
             return True
 
@@ -48,6 +54,25 @@ class WindowController:
         if win32gui.IsIconic(target_hwnd):
             win32gui.ShowWindow(target_hwnd, win32con.SW_RESTORE)
 
+        # 最前面化する際の制限（SetForegroundWindowの失敗）を回避するため、
+        # 現在アクティブなスレッドの入力を結合する
+        current_thread_id = win32api.GetCurrentThreadId()
+        foreground_thread_id = (
+            win32process.GetWindowThreadProcessId(current_hwnd)[0]
+            if current_hwnd
+            else 0
+        )
+
+        attached = False
+        if foreground_thread_id and foreground_thread_id != current_thread_id:
+            try:
+                win32api.AttachThreadInput(
+                    current_thread_id, foreground_thread_id, True
+                )
+                attached = True
+            except Exception:
+                pass
+
         try:
             # ウィンドウをアクティブにする
             win32gui.SetForegroundWindow(target_hwnd)
@@ -67,3 +92,12 @@ class WindowController:
 
         except Exception as error:
             print(f"エラーが発生しました: {error}")
+        finally:
+            # 入力の結合を解除する
+            if attached:
+                try:
+                    win32api.AttachThreadInput(
+                        current_thread_id, foreground_thread_id, False
+                    )
+                except Exception:
+                    pass
