@@ -1,5 +1,5 @@
-from key_router import KeyRouter
-from window_controller import WindowController
+from key_dp.key_router import KeyRouter
+from key_dp.window_controller import WindowController
 
 # --- 設定 ---
 # ターゲットとなるアプリのウィンドウタイトル（部分一致）

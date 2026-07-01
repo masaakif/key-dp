@@ -1,5 +1,5 @@
 import keyboard
-from window_controller import WindowController
+from .window_controller import WindowController
 
 
 class KeyRouter:

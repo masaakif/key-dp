@@ -1,14 +1,14 @@
 from unittest.mock import patch
 import pytest
-from window_controller import WindowController
+from key_dp.window_controller import WindowController
 
 
 @pytest.fixture
 def mock_win32():
     with (
-        patch("window_controller.win32gui") as mock_gui,
-        patch("window_controller.win32con") as mock_con,
-        patch("window_controller.pyautogui") as mock_pyauto,
+        patch("key_dp.window_controller.win32gui") as mock_gui,
+        patch("key_dp.window_controller.win32con") as mock_con,
+        patch("key_dp.window_controller.pyautogui") as mock_pyauto,
     ):
         yield mock_gui, mock_con, mock_pyauto
 

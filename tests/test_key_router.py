@@ -1,11 +1,11 @@
 from unittest.mock import MagicMock, patch
 import pytest
-from key_router import KeyRouter
+from key_dp.key_router import KeyRouter
 
 
 @pytest.fixture
 def mock_keyboard():
-    with patch("key_router.keyboard") as mock_kb:
+    with patch("key_dp.key_router.keyboard") as mock_kb:
         yield mock_kb
 
 
