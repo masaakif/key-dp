@@ -1,6 +1,8 @@
 import time
+import win32api
 import win32con
 import win32gui
+import win32process
 
 # 矢印キーからWindows仮想キーコードへのマッピング
 KEY_MAPPING = {
@@ -12,7 +14,7 @@ KEY_MAPPING = {
 
 
 class WindowController:
-    """Windows上のウィンドウ探索やバックグラウンドでのキー送信を行うクラス"""
+    """Windows上のウィンドウ探索やアクティブ化、キー送信を行うクラス"""
 
     @staticmethod
     def get_window_handle(title_part: str):
@@ -34,7 +36,10 @@ class WindowController:
         return hwnd_list[0] if hwnd_list else None
 
     def send_key_to_window(self, target_title: str, key_name: str):
-        """特定のウィンドウへ、アクティブ化を行わずに直接キーメッセージを送信する"""
+        """特定のウィンドウを一瞬だけ最前面にしてキーを送り、元のウィンドウに即座に戻す"""
+        # 現在アクティブなウィンドウを記憶
+        current_hwnd = win32gui.GetForegroundWindow()
+
         # 対象のウィンドウを探す
         target_hwnd = self.get_window_handle(target_title)
 
@@ -47,20 +52,61 @@ class WindowController:
             print(f"無効なキー名です: {key_name}")
             return
 
-        # 拡張キー（矢印キーなど）用のフラグを含めたlParam値の設定
-        # 24ビット目（1 << 24）は拡張キーフラグ
-        # 30ビット目（1 << 30）は直前の状態フラグ（Upのときは1）
-        # 31ビット目（1 << 31）は遷移状態フラグ（Upのときは1）
-        l_param_down = 1 | (1 << 24)
-        l_param_up = 1 | (1 << 24) | (1 << 30) | (1 << 31)
+        # すでにアクティブなら、そのままキーを送信して終了
+        if current_hwnd == target_hwnd:
+            try:
+                win32api.keybd_event(vk_code, 0, 0, 0)
+                time.sleep(0.005)
+                win32api.keybd_event(vk_code, 0, win32con.KEYEVENTF_KEYUP, 0)
+            except Exception as error:
+                print(f"キー送信エラーが発生しました: {error}")
+            return
+
+        # 対象ウィンドウが最小化している場合は元に戻す
+        if win32gui.IsIconic(target_hwnd):
+            win32gui.ShowWindow(target_hwnd, win32con.SW_RESTORE)
+
+        # フォーカス制御の制限を回避するため、スレッド入力をアタッチする
+        current_thread_id = win32api.GetCurrentThreadId()
+        foreground_thread_id = (
+            win32process.GetWindowThreadProcessId(current_hwnd)[0]
+            if current_hwnd
+            else 0
+        )
+
+        attached = False
+        if foreground_thread_id and foreground_thread_id != current_thread_id:
+            try:
+                win32api.AttachThreadInput(
+                    current_thread_id, foreground_thread_id, True
+                )
+                attached = True
+            except Exception:
+                pass
 
         try:
-            # 押下（WM_KEYDOWN）を送信
-            win32gui.PostMessage(
-                target_hwnd, win32con.WM_KEYDOWN, vk_code, l_param_down
-            )
-            time.sleep(0.01)  # メッセージの処理順序を保証するためのわずかなウェイト
-            # 離上（WM_KEYUP）を送信
-            win32gui.PostMessage(target_hwnd, win32con.WM_KEYUP, vk_code, l_param_up)
+            # ターゲットウィンドウを最前面にする
+            win32gui.SetForegroundWindow(target_hwnd)
+            time.sleep(0.005)  # フォーカスが切り替わる最小限のウェイト
+
+            # キーメッセージを送信
+            win32api.keybd_event(vk_code, 0, 0, 0)
+            time.sleep(0.005)
+            win32api.keybd_event(vk_code, 0, win32con.KEYEVENTF_KEYUP, 0)
+            time.sleep(0.005)
+
+            # 元のアクティブウィンドウにフォーカスを戻す
+            if current_hwnd and win32gui.IsWindow(current_hwnd):
+                win32gui.SetForegroundWindow(current_hwnd)
+
         except Exception as error:
-            print(f"キー送信エラーが発生しました: {error}")
+            print(f"アクティブ化または送信中にエラーが発生しました: {error}")
+        finally:
+            # スレッド入力をデタッチする
+            if attached:
+                try:
+                    win32api.AttachThreadInput(
+                        current_thread_id, foreground_thread_id, False
+                    )
+                except Exception:
+                    pass
